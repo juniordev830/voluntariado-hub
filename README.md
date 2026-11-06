@@ -1,48 +1,38 @@
-# Voluntariado Hub
+# Voluntariado Hub — Spring Boot MVP
 
-> Status: concepção. Este repositório contém apenas o escopo inicial; ainda não há aplicação executável ou funcionalidades implementadas.
+API local em **Java 17 + Spring Boot + JPA**, com H2 em memória para demonstrar rapidamente o funcionamento e opção de **PostgreSQL** via Docker Compose.
 
-## Ideia
+## Implementado
+- Criar ação comunitária e turnos com capacidade, início e fim.
+- Inscrever um identificador fictício de voluntário em um turno.
+- Impedir inscrição duplicada e recusar vagas acima da capacidade.
+- Consultar total ocupado e vagas restantes.
+- Bloqueio pessimista de turno durante inscrição para proteger a capacidade em acessos concorrentes.
 
-Relacionar ações comunitárias com turnos e vagas para voluntários.
+## Iniciar (H2 em memória)
+```bash
+mvn spring-boot:run
+```
+API local: http://127.0.0.1:8080
 
-## Primeira versão planejada
+## Usar PostgreSQL local
+```bash
+docker compose up -d
+SPRING_PROFILES_ACTIVE=postgres mvn spring-boot:run
+```
+No Windows PowerShell, defina `$env:SPRING_PROFILES_ACTIVE="postgres"` antes do comando Maven. Usuário e senha em `compose.yml` são **somente para desenvolvimento local** e devem ser substituídos em qualquer ambiente compartilhado.
 
-- [ ] Cadastrar ação e turnos.
-- [ ] Registrar inscrição em um turno.
-- [ ] Consultar vagas restantes.
+## Rotas
+- `POST /api/activities` — `{"title":"Mutirão de limpeza"}`
+- `POST /api/shifts` — `{"activityId":1,"capacity":2,"startsAt":"2026-11-08T09:00:00","endsAt":"2026-11-08T11:00:00"}`
+- `POST /api/shifts/1/enrollments` — `{"volunteerCode":"voluntario-ficticio-1"}`
+- `GET /api/shifts/1` — vagas ocupadas/restantes
 
-## Modelo inicial
+## Testes
+```bash
+mvn test
+```
+O teste integra a API e verifica que uma terceira inscrição é rejeitada quando só há duas vagas.
 
-Ação, turno e inscrição.
-
-## Regras e limites
-
-Impedir inscrição duplicada e respeitar capacidade; começar com pessoas fictícias.
-
-Escopo mantido pequeno: sem pagamentos, integrações externas, infraestrutura de produção ou uso de dados pessoais reais nesta etapa.
-
-## Tecnologia proposta
-
-Java + Spring Boot + PostgreSQL.
-
-A escolha é uma proposta para a futura implementação; nenhuma dependência foi instalada e a tecnologia ainda não foi implementada.
-
-## Critério de conclusão do primeiro incremento
-
-Um turno de duas vagas deve impedir uma terceira inscrição ativa.
-
-## Próximos passos
-
-1. Revisar este escopo antes de começar a implementação.
-2. Preparar o ambiente mínimo da tecnologia escolhida.
-3. Implementar um fluxo completo e validar o critério acima.
-4. Documentar a execução e acrescentar exemplos demonstrativos.
-
-## Possíveis evoluções
-
-Depois de validar o fluxo principal, avaliar persistência, acessibilidade e uma interface mais completa conforme a plataforma. Evoluções não fazem parte da entrega atual.
-
-## Como executar
-
-Ainda não há comandos de execução. Eles serão adicionados quando existir uma primeira versão funcional.
+## Limites
+API demonstrativa sem contas reais, autenticação e autorização. O perfil H2 perde dados ao reiniciar; PostgreSQL permite persistência local. A criação/atualização automática de tabelas é para desenvolvimento; produção requer migrações versionadas, controle de acesso e política de dados pessoais.

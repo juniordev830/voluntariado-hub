@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class VolunteerHubTest {
     private static void check(boolean value, String message) {
@@ -71,10 +72,76 @@ public final class VolunteerHubTest {
         check(hub.listShifts().size() == 1, "Snapshot incorreto");
     }
 
+    private static void transferIsAtomicAndChecksCapacity() {
+        VolunteerHub hub = new VolunteerHub();
+        hub.addShift("origem", "Acao de manha", 3);
+        hub.addShift("destino", "Acao de tarde", 1);
+        hub.enroll("origem", "ana");
+        hub.enroll("origem", "bia");
+        hub.enroll("destino", "caio");
+
+        fails(IllegalStateException.class, () -> hub.transfer("origem", "destino", "ana"));
+        check(hub.getShift("origem").enrolled() == 2, "Falha nao pode remover da origem");
+        check(hub.getShift("destino").enrolled() == 1, "Falha nao pode alterar destino");
+
+        hub.cancel("destino", "caio");
+        VolunteerHub.ShiftView result = hub.transfer("origem", "destino", "ana");
+        check(result.enrolled() == 1 && result.available() == 0, "Transferencia deve ocupar destino");
+        check(hub.getShift("origem").enrolled() == 1, "Transferencia deve liberar origem");
+
+        fails(IllegalArgumentException.class, () -> hub.transfer("origem", "origem", "bia"));
+        fails(IllegalStateException.class, () -> hub.transfer("origem", "destino", "ausente"));
+        check(hub.getShift("origem").enrolled() == 1, "Transferencia invalida nao altera vagas");
+
+        hub.cancel("destino", "ana");
+        hub.enroll("destino", "bia");
+        fails(IllegalStateException.class, () -> hub.transfer("origem", "destino", "bia"));
+        check(hub.getShift("origem").enrolled() == 1, "Duplicidade no destino preserva origem");
+    }
+
+    private static void concurrentTransfersRespectCapacity() throws InterruptedException {
+        VolunteerHub hub = new VolunteerHub();
+        hub.addShift("origem", "Acao A", 30);
+        hub.addShift("destino", "Acao B", 1);
+
+        CountDownLatch start = new CountDownLatch(1);
+        List<Thread> threads = new ArrayList<>();
+        AtomicInteger moved = new AtomicInteger();
+        AtomicReference<Throwable> unexpected = new AtomicReference<>();
+        for (int index = 0; index < 20; index++) {
+            String volunteer = "p" + index;
+            hub.enroll("origem", volunteer);
+            Thread worker = new Thread(() -> {
+                try {
+                    start.await();
+                    hub.transfer("origem", "destino", volunteer);
+                    moved.incrementAndGet();
+                } catch (IllegalStateException expectedFullTarget) {
+                    // Only one of the twenty transfers can obtain the free slot.
+                } catch (Throwable error) {
+                    unexpected.compareAndSet(null, error);
+                }
+            });
+            worker.start();
+            threads.add(worker);
+        }
+        start.countDown();
+        for (Thread worker : threads) worker.join();
+
+        if (unexpected.get() != null) {
+            throw new AssertionError("Erro inesperado em transferencia concorrente", unexpected.get());
+        }
+        check(moved.get() == 1, "Somente uma transferencia pode ocupar a ultima vaga");
+        check(hub.getShift("destino").enrolled() == 1, "Destino nao pode exceder capacidade");
+        check(hub.getShift("origem").enrolled() == 19, "Demais inscricoes devem permanecer na origem");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         capacityAndUniqueness();
         invalidInputs();
         concurrentEnrollment();
-        System.out.println("PASS: capacity, uniqueness, cancellation, invalid inputs, concurrency");
+        transferIsAtomicAndChecksCapacity();
+        concurrentTransfersRespectCapacity();
+        System.out.println("PASS: capacity, uniqueness, cancellation, transfers, concurrency");
     }
 }

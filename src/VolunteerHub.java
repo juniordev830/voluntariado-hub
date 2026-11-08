@@ -90,6 +90,35 @@ public final class VolunteerHub {
         return shift.snapshot();
     }
 
+    /**
+     * Transfer an active enrollment atomically between shifts. All validation
+     * happens before either set changes, so a full target leaves the source
+     * enrollment untouched.
+     */
+    public synchronized ShiftView transfer(
+            String sourceId, String destinationId, String volunteerId) {
+        Shift source = requireShift(sourceId);
+        Shift destination = requireShift(destinationId);
+        volunteerId = token(volunteerId, "voluntario");
+
+        if (source == destination) {
+            throw new IllegalArgumentException("Turnos de origem e destino devem ser diferentes");
+        }
+        if (!source.enrolled.contains(volunteerId)) {
+            throw new IllegalStateException("Voluntario nao inscrito na origem");
+        }
+        if (destination.enrolled.contains(volunteerId)) {
+            throw new IllegalStateException("Voluntario ja inscrito no destino");
+        }
+        if (destination.enrolled.size() >= destination.capacity) {
+            throw new IllegalStateException("Turno de destino sem vagas");
+        }
+
+        source.enrolled.remove(volunteerId);
+        destination.enrolled.add(volunteerId);
+        return destination.snapshot();
+    }
+
     public synchronized ShiftView getShift(String shiftId) {
         return requireShift(shiftId).snapshot();
     }

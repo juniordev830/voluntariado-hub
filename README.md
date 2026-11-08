@@ -8,6 +8,7 @@ Primeiro MVP **Java 17** de cadastro de turnos e inscrições de voluntários fi
 - Inscrever voluntários por identificador único dentro do turno.
 - Rejeitar inscrição duplicada e terceira pessoa quando restam apenas duas vagas já preenchidas.
 - Cancelar uma inscrição, liberando a vaga de forma imediata.
+- Transferir inscrições entre turnos de maneira atômica, rejeitando destinos cheios ou duplicados sem perder a vaga de origem.
 - Consultar vagas livres e inscrições por turno.
 - Garantir que chamadas concorrentes no mesmo processo não ultrapassem a capacidade.
 
@@ -22,7 +23,7 @@ java -cp out VolunteerHub
 java -cp out VolunteerHubTest
 ```
 
-A execução demonstrativa cria um turno com duas vagas e dois inscritos fictícios; os testes verificam duplicidade, cancelamento, vagas esgotadas, dados inválidos e concorrência.
+A execução demonstrativa cria um turno com duas vagas e dois inscritos fictícios; os testes verificam duplicidade, cancelamento, vagas esgotadas, dados inválidos, transferências com rollback e concorrência.
 
 ## Limites
 

@@ -136,12 +136,77 @@ public final class VolunteerHubTest {
         check(hub.getShift("origem").enrolled() == 19, "Demais inscricoes devem permanecer na origem");
     }
 
+    private static void firstAvailableAssignmentIsAtomic() {
+        VolunteerHub hub = new VolunteerHub();
+        hub.addShift("manha", "Turno inicial", 1);
+        hub.addShift("tarde", "Turno alternativo", 2);
+        hub.enroll("manha", "ocupado");
+
+        VolunteerHub.ShiftView assigned =
+            hub.enrollFirstAvailable(List.of("manha", "tarde"), "nova-pessoa");
+        check(assigned.id().equals("tarde") && assigned.enrolled() == 1,
+            "Deve respeitar a ordem e pular turnos lotados");
+
+        fails(IllegalArgumentException.class,
+            () -> hub.enrollFirstAvailable(List.of("manha", "inexistente"), "outro"));
+        fails(IllegalArgumentException.class,
+            () -> hub.enrollFirstAvailable(List.of("tarde", "tarde"), "outro"));
+        fails(IllegalArgumentException.class,
+            () -> hub.enrollFirstAvailable(List.of(), "outro"));
+        fails(IllegalStateException.class,
+            () -> hub.enrollFirstAvailable(List.of("manha", "tarde"), "nova-pessoa"));
+        check(hub.getShift("tarde").enrolled() == 1,
+            "Falha de validacao nao pode alterar inscricoes");
+
+        hub.enrollFirstAvailable(List.of("manha", "tarde"), "segunda-pessoa");
+        fails(IllegalStateException.class,
+            () -> hub.enrollFirstAvailable(List.of("manha", "tarde"), "sem-vaga"));
+        check(hub.getShift("tarde").available() == 0,
+            "Nao pode ultrapassar capacidade");
+    }
+
+    private static void concurrentFirstAvailableAssignment() throws InterruptedException {
+        VolunteerHub hub = new VolunteerHub();
+        hub.addShift("um", "Acao A", 1);
+        hub.addShift("dois", "Acao B", 2);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Thread> workers = new ArrayList<>();
+        AtomicInteger accepted = new AtomicInteger();
+        AtomicReference<Throwable> unexpected = new AtomicReference<>();
+        for (int i = 0; i < 20; i++) {
+            String id = "p" + i;
+            Thread worker = new Thread(() -> {
+                try {
+                    start.await();
+                    hub.enrollFirstAvailable(List.of("um", "dois"), id);
+                    accepted.incrementAndGet();
+                } catch (IllegalStateException noSlots) {
+                    // Esperado apos as tres vagas serem ocupadas.
+                } catch (Throwable error) {
+                    unexpected.compareAndSet(null, error);
+                }
+            });
+            worker.start();
+            workers.add(worker);
+        }
+        start.countDown();
+        for (Thread worker : workers) worker.join();
+        if (unexpected.get() != null) {
+            throw new AssertionError("Falha concorrente inesperada", unexpected.get());
+        }
+        check(accepted.get() == 3, "Devem ser aceitas exatamente tres inscricoes");
+        check(hub.getShift("um").enrolled() == 1 && hub.getShift("dois").enrolled() == 2,
+            "Cada turno deve preservar seu limite");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         capacityAndUniqueness();
         invalidInputs();
         concurrentEnrollment();
         transferIsAtomicAndChecksCapacity();
         concurrentTransfersRespectCapacity();
+        firstAvailableAssignmentIsAtomic();
+        concurrentFirstAvailableAssignment();
         System.out.println("PASS: capacity, uniqueness, cancellation, transfers, concurrency");
     }
 }

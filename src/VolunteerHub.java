@@ -119,6 +119,43 @@ public final class VolunteerHub {
         return destination.snapshot();
     }
 
+    /**
+     * Assign a volunteer to the first available shift in caller priority order.
+     * Check every candidate and existing enrollment before changing any shift,
+     * so invalid input and full shifts cannot cause partial enrollment.
+     */
+    public synchronized ShiftView enrollFirstAvailable(
+            List<String> candidateShiftIds, String volunteerId) {
+        if (candidateShiftIds == null || candidateShiftIds.isEmpty() || candidateShiftIds.size() > 100) {
+            throw new IllegalArgumentException("Informe de 1 a 100 turnos candidatos");
+        }
+        volunteerId = token(volunteerId, "voluntario");
+
+        Set<String> uniqueIds = new LinkedHashSet<>();
+        List<Shift> candidates = new ArrayList<>();
+        for (String id : candidateShiftIds) {
+            Shift shift = requireShift(id);
+            if (!uniqueIds.add(shift.id)) {
+                throw new IllegalArgumentException("Turno candidato repetido: " + shift.id);
+            }
+            candidates.add(shift);
+        }
+
+        for (Shift shift : candidates) {
+            if (shift.enrolled.contains(volunteerId)) {
+                throw new IllegalStateException("Voluntario ja inscrito em turno candidato");
+            }
+        }
+
+        for (Shift shift : candidates) {
+            if (shift.enrolled.size() < shift.capacity) {
+                shift.enrolled.add(volunteerId);
+                return shift.snapshot();
+            }
+        }
+        throw new IllegalStateException("Nenhum turno candidato com vagas livres");
+    }
+
     public synchronized ShiftView getShift(String shiftId) {
         return requireShift(shiftId).snapshot();
     }

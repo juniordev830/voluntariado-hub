@@ -10,6 +10,7 @@ Primeiro MVP **Java 17** de cadastro de turnos e inscrições de voluntários fi
 - Cancelar uma inscrição, liberando a vaga de forma imediata.
 - Transferir inscrições entre turnos de maneira atômica, rejeitando destinos cheios ou duplicados sem perder a vaga de origem.
 - Consultar vagas livres e inscrições por turno.
+- Consultar todos os turnos vinculados a um identificador de voluntário com `shiftsForVolunteer(String)`; resultado imutável na ordem de cadastro, atualizado após cancelamentos e transferências.
 - Inscrever automaticamente no primeiro turno com vagas em uma lista de prioridades; valida todos os candidatos antes de alterar qualquer inscrição.
 - Garantir que chamadas concorrentes no mesmo processo não ultrapassem a capacidade.
 

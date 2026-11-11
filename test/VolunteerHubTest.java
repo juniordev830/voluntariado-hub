@@ -225,6 +225,48 @@ public final class VolunteerHubTest {
                 .toList().equals(List.of("noite")), "Cancelamento deve atualizar consulta");
     }
 
+    private static void previewIsReadOnlyAndConfirmationRechecksCapacity() {
+        VolunteerHub hub = new VolunteerHub();
+        hub.addShift("manha", "Acao 1", 1);
+        hub.addShift("tarde", "Acao 2", 2);
+        List<String> candidates = List.of("manha", "tarde");
+
+        VolunteerHub.ShiftView preview = hub.previewFirstAvailable(candidates, "pessoa-1");
+        check(preview.id().equals("manha") && preview.available() == 1,
+            "Previa deve indicar primeira vaga livre");
+        check(hub.getShift("manha").available() == 1,
+            "Previa nao deve reservar vaga");
+
+        hub.enroll("manha", "pessoa-2");
+        VolunteerHub.ShiftView confirmed = hub.enrollFirstAvailable(candidates, "pessoa-1");
+        check(confirmed.id().equals("tarde") && confirmed.enrolled() == 1,
+            "Confirmacao deve recalcular apos outra inscricao");
+        check(preview.available() == 1,
+            "Snapshot antigo deve continuar imutavel");
+
+        VolunteerHub.ShiftView next = hub.previewFirstAvailable(candidates, "pessoa-3");
+        check(next.id().equals("tarde") && next.available() == 1,
+            "Previa deve considerar a capacidade atual");
+
+        fails(IllegalArgumentException.class,
+            () -> hub.previewFirstAvailable(List.of("manha", "inexistente"), "pessoa-4"));
+        fails(IllegalArgumentException.class,
+            () -> hub.previewFirstAvailable(List.of("tarde", "tarde"), "pessoa-4"));
+        fails(IllegalArgumentException.class,
+            () -> hub.previewFirstAvailable(candidates, "nome invalido"));
+        fails(IllegalStateException.class,
+            () -> hub.previewFirstAvailable(candidates, "pessoa-1"));
+        check(hub.getShift("tarde").available() == 1,
+            "Falhas na previa nao devem consumir vagas");
+
+        hub.enroll("tarde", "pessoa-3");
+        fails(IllegalStateException.class,
+            () -> hub.previewFirstAvailable(candidates, "pessoa-4"));
+        check(hub.getShift("manha").available() == 0
+                && hub.getShift("tarde").available() == 0,
+            "Previa de turnos lotados nao altera o estado");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         capacityAndUniqueness();
         invalidInputs();
@@ -234,6 +276,7 @@ public final class VolunteerHubTest {
         firstAvailableAssignmentIsAtomic();
         concurrentFirstAvailableAssignment();
         volunteerShiftLookup();
+        previewIsReadOnlyAndConfirmationRechecksCapacity();
         System.out.println("PASS: capacity, uniqueness, cancellation, transfers, concurrency");
     }
 }

@@ -156,6 +156,21 @@ public final class VolunteerHub {
         throw new IllegalStateException("Nenhum turno candidato com vagas livres");
     }
 
+    /**
+     * Returns an immutable snapshot of shifts containing the volunteer.
+     * Shift order follows registration order; no personal details are exposed.
+     */
+    public synchronized List<ShiftView> shiftsForVolunteer(String volunteerId) {
+        volunteerId = token(volunteerId, "voluntario");
+        List<ShiftView> result = new ArrayList<>();
+        for (Shift shift : shifts.values()) {
+            if (shift.enrolled.contains(volunteerId)) {
+                result.add(shift.snapshot());
+            }
+        }
+        return List.copyOf(result);
+    }
+
     public synchronized ShiftView getShift(String shiftId) {
         return requireShift(shiftId).snapshot();
     }

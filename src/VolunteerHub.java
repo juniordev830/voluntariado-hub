@@ -124,7 +124,23 @@ public final class VolunteerHub {
      * Check every candidate and existing enrollment before changing any shift,
      * so invalid input and full shifts cannot cause partial enrollment.
      */
+    public synchronized ShiftView previewFirstAvailable(
+            List<String> candidateShiftIds, String volunteerId) {
+        return selectFirstAvailable(candidateShiftIds, volunteerId).snapshot();
+    }
+
     public synchronized ShiftView enrollFirstAvailable(
+            List<String> candidateShiftIds, String volunteerId) {
+        Shift selected = selectFirstAvailable(candidateShiftIds, volunteerId);
+        selected.enrolled.add(volunteerId);
+        return selected.snapshot();
+    }
+
+    /**
+     * Resolves the eligible shift without modifying enrollments.
+     * The caller must re-run this selection when confirming a preview.
+     */
+    private Shift selectFirstAvailable(
             List<String> candidateShiftIds, String volunteerId) {
         if (candidateShiftIds == null || candidateShiftIds.isEmpty() || candidateShiftIds.size() > 100) {
             throw new IllegalArgumentException("Informe de 1 a 100 turnos candidatos");
@@ -149,8 +165,7 @@ public final class VolunteerHub {
 
         for (Shift shift : candidates) {
             if (shift.enrolled.size() < shift.capacity) {
-                shift.enrolled.add(volunteerId);
-                return shift.snapshot();
+                return shift;
             }
         }
         throw new IllegalStateException("Nenhum turno candidato com vagas livres");

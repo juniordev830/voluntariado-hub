@@ -199,6 +199,32 @@ public final class VolunteerHubTest {
             "Cada turno deve preservar seu limite");
     }
 
+    private static void volunteerShiftLookup() {
+        VolunteerHub hub = new VolunteerHub();
+        hub.addShift("manha", "Distribuicao de alimentos", 2);
+        hub.addShift("tarde", "Triagem", 2);
+        hub.addShift("noite", "Organizacao", 2);
+        hub.enroll("manha", "vol-1");
+        hub.enroll("tarde", "vol-1");
+
+        List<VolunteerHub.ShiftView> snapshot = hub.shiftsForVolunteer("vol-1");
+        check(snapshot.stream().map(VolunteerHub.ShiftView::id).toList()
+                .equals(List.of("manha", "tarde")), "Deve listar turnos na ordem de cadastro");
+        check(hub.shiftsForVolunteer("sem-inscricao").isEmpty(),
+                "Voluntario sem inscricoes deve retornar lista vazia");
+        fails(IllegalArgumentException.class, () -> hub.shiftsForVolunteer("nome invalido"));
+        fails(UnsupportedOperationException.class, () -> snapshot.clear());
+
+        hub.transfer("manha", "noite", "vol-1");
+        check(snapshot.size() == 2 && snapshot.get(0).id().equals("manha"),
+                "Snapshot antigo deve permanecer inalterado");
+        check(hub.shiftsForVolunteer("vol-1").stream().map(VolunteerHub.ShiftView::id)
+                .toList().equals(List.of("tarde", "noite")), "Transferencia deve atualizar consulta");
+        hub.cancel("tarde", "vol-1");
+        check(hub.shiftsForVolunteer("vol-1").stream().map(VolunteerHub.ShiftView::id)
+                .toList().equals(List.of("noite")), "Cancelamento deve atualizar consulta");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         capacityAndUniqueness();
         invalidInputs();
@@ -207,6 +233,7 @@ public final class VolunteerHubTest {
         concurrentTransfersRespectCapacity();
         firstAvailableAssignmentIsAtomic();
         concurrentFirstAvailableAssignment();
+        volunteerShiftLookup();
         System.out.println("PASS: capacity, uniqueness, cancellation, transfers, concurrency");
     }
 }

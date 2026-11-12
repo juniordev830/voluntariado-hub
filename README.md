@@ -53,3 +53,7 @@ Por enquanto é uma aplicação em memória e terminal, **não** um sistema púb
 - [x] Consultar vagas restantes
 - [x] Testar que um turno de 2 vagas impede uma terceira inscrição
 - [ ] Persistência e API autenticada
+
+## Documentação técnica
+
+Confira o [roteiro de validação e próximos incrementos](docs/GUIA_DE_VALIDACAO.md) para revisar a implementação e os critérios de qualidade antes de mudanças futuras.

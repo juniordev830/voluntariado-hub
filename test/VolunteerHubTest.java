@@ -199,6 +199,74 @@ public final class VolunteerHubTest {
             "Cada turno deve preservar seu limite");
     }
 
+    private static void volunteerShiftLookup() {
+        VolunteerHub hub = new VolunteerHub();
+        hub.addShift("manha", "Distribuicao de alimentos", 2);
+        hub.addShift("tarde", "Triagem", 2);
+        hub.addShift("noite", "Organizacao", 2);
+        hub.enroll("manha", "vol-1");
+        hub.enroll("tarde", "vol-1");
+
+        List<VolunteerHub.ShiftView> snapshot = hub.shiftsForVolunteer("vol-1");
+        check(snapshot.stream().map(VolunteerHub.ShiftView::id).toList()
+                .equals(List.of("manha", "tarde")), "Deve listar turnos na ordem de cadastro");
+        check(hub.shiftsForVolunteer("sem-inscricao").isEmpty(),
+                "Voluntario sem inscricoes deve retornar lista vazia");
+        fails(IllegalArgumentException.class, () -> hub.shiftsForVolunteer("nome invalido"));
+        fails(UnsupportedOperationException.class, () -> snapshot.clear());
+
+        hub.transfer("manha", "noite", "vol-1");
+        check(snapshot.size() == 2 && snapshot.get(0).id().equals("manha"),
+                "Snapshot antigo deve permanecer inalterado");
+        check(hub.shiftsForVolunteer("vol-1").stream().map(VolunteerHub.ShiftView::id)
+                .toList().equals(List.of("tarde", "noite")), "Transferencia deve atualizar consulta");
+        hub.cancel("tarde", "vol-1");
+        check(hub.shiftsForVolunteer("vol-1").stream().map(VolunteerHub.ShiftView::id)
+                .toList().equals(List.of("noite")), "Cancelamento deve atualizar consulta");
+    }
+
+    private static void previewIsReadOnlyAndConfirmationRechecksCapacity() {
+        VolunteerHub hub = new VolunteerHub();
+        hub.addShift("manha", "Acao 1", 1);
+        hub.addShift("tarde", "Acao 2", 2);
+        List<String> candidates = List.of("manha", "tarde");
+
+        VolunteerHub.ShiftView preview = hub.previewFirstAvailable(candidates, "pessoa-1");
+        check(preview.id().equals("manha") && preview.available() == 1,
+            "Previa deve indicar primeira vaga livre");
+        check(hub.getShift("manha").available() == 1,
+            "Previa nao deve reservar vaga");
+
+        hub.enroll("manha", "pessoa-2");
+        VolunteerHub.ShiftView confirmed = hub.enrollFirstAvailable(candidates, "pessoa-1");
+        check(confirmed.id().equals("tarde") && confirmed.enrolled() == 1,
+            "Confirmacao deve recalcular apos outra inscricao");
+        check(preview.available() == 1,
+            "Snapshot antigo deve continuar imutavel");
+
+        VolunteerHub.ShiftView next = hub.previewFirstAvailable(candidates, "pessoa-3");
+        check(next.id().equals("tarde") && next.available() == 1,
+            "Previa deve considerar a capacidade atual");
+
+        fails(IllegalArgumentException.class,
+            () -> hub.previewFirstAvailable(List.of("manha", "inexistente"), "pessoa-4"));
+        fails(IllegalArgumentException.class,
+            () -> hub.previewFirstAvailable(List.of("tarde", "tarde"), "pessoa-4"));
+        fails(IllegalArgumentException.class,
+            () -> hub.previewFirstAvailable(candidates, "nome invalido"));
+        fails(IllegalStateException.class,
+            () -> hub.previewFirstAvailable(candidates, "pessoa-1"));
+        check(hub.getShift("tarde").available() == 1,
+            "Falhas na previa nao devem consumir vagas");
+
+        hub.enroll("tarde", "pessoa-3");
+        fails(IllegalStateException.class,
+            () -> hub.previewFirstAvailable(candidates, "pessoa-4"));
+        check(hub.getShift("manha").available() == 0
+                && hub.getShift("tarde").available() == 0,
+            "Previa de turnos lotados nao altera o estado");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         capacityAndUniqueness();
         invalidInputs();
@@ -207,6 +275,8 @@ public final class VolunteerHubTest {
         concurrentTransfersRespectCapacity();
         firstAvailableAssignmentIsAtomic();
         concurrentFirstAvailableAssignment();
+        volunteerShiftLookup();
+        previewIsReadOnlyAndConfirmationRechecksCapacity();
         System.out.println("PASS: capacity, uniqueness, cancellation, transfers, concurrency");
     }
 }

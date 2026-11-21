@@ -43,7 +43,8 @@ public final class VolunteerHub {
     }
 
     private static String description(String value) {
-        if (value == null || value.isBlank() || value.length() > 140) {
+        if (value == null || value.isBlank() || value.length() > 140 ||
+            value.codePoints().anyMatch(Character::isISOControl)) {
             throw new IllegalArgumentException("Nome da acao invalido");
         }
         return value.strip();

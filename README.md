@@ -73,3 +73,5 @@ Por enquanto é uma aplicação em memória e terminal, **não** um sistema púb
 ## Documentação técnica
 
 Confira o [roteiro de validação e próximos incrementos](docs/GUIA_DE_VALIDACAO.md) para revisar a implementação e os critérios de qualidade antes de mudanças futuras.
+
+Nomes de ações rejeitam caracteres de controle (incluindo quebras de linha e escapes ANSI), sem impedir acentos em português. O catálogo em memória aceita no máximo 1.000 turnos; ao atingir o limite, um novo cadastro falha sem modificar os turnos existentes.

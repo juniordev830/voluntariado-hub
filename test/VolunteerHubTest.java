@@ -267,9 +267,29 @@ public final class VolunteerHubTest {
             "Previa de turnos lotados nao altera o estado");
     }
 
+    private static void rejectsUnsafeActionNames() {
+        VolunteerHub hub = new VolunteerHub();
+        fails(IllegalArgumentException.class, () -> hub.addShift("turno", "Acao\nFalsa", 1));
+        fails(IllegalArgumentException.class, () -> hub.addShift("turno", "Acao\u001b[31m", 1));
+        check(hub.listShifts().isEmpty(), "Descricoes invalidas nao podem criar turnos");
+        check(hub.addShift("turno", "  Ação social  ", 1).action().equals("Ação social"),
+            "Descricao com acentos e espaços deve ser normalizada");
+    }
+
+    private static void respectsShiftCountLimit() {
+        VolunteerHub hub = new VolunteerHub();
+        for (int index = 0; index < 1000; index++) {
+            hub.addShift("shift" + index, "Mutirao", 1);
+        }
+        fails(IllegalStateException.class, () -> hub.addShift("extra", "Mutirao", 1));
+        check(hub.listShifts().size() == 1000, "Limite nao deve alterar turnos cadastrados");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         capacityAndUniqueness();
         invalidInputs();
+        rejectsUnsafeActionNames();
+        respectsShiftCountLimit();
         concurrentEnrollment();
         transferIsAtomicAndChecksCapacity();
         concurrentTransfersRespectCapacity();

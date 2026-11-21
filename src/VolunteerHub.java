@@ -43,7 +43,8 @@ public final class VolunteerHub {
     }
 
     private static String description(String value) {
-        if (value == null || value.isBlank() || value.length() > 140) {
+        if (value == null || value.isBlank() || value.length() > 140 ||
+            value.codePoints().anyMatch(Character::isISOControl)) {
             throw new IllegalArgumentException("Nome da acao invalido");
         }
         return value.strip();
@@ -56,6 +57,9 @@ public final class VolunteerHub {
         }
         if (shifts.containsKey(id)) {
             throw new IllegalArgumentException("Turno duplicado: " + id);
+        }
+        if (shifts.size() >= 1000) {
+            throw new IllegalStateException("Limite de 1000 turnos atingido");
         }
         Shift shift = new Shift(id, description(action), capacity);
         shifts.put(id, shift);

@@ -276,10 +276,20 @@ public final class VolunteerHubTest {
             "Descricao com acentos e espaços deve ser normalizada");
     }
 
+    private static void respectsShiftCountLimit() {
+        VolunteerHub hub = new VolunteerHub();
+        for (int index = 0; index < 1000; index++) {
+            hub.addShift("shift" + index, "Mutirao", 1);
+        }
+        fails(IllegalStateException.class, () -> hub.addShift("extra", "Mutirao", 1));
+        check(hub.listShifts().size() == 1000, "Limite nao deve alterar turnos cadastrados");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         capacityAndUniqueness();
         invalidInputs();
         rejectsUnsafeActionNames();
+        respectsShiftCountLimit();
         concurrentEnrollment();
         transferIsAtomicAndChecksCapacity();
         concurrentTransfersRespectCapacity();

@@ -58,6 +58,9 @@ public final class VolunteerHub {
         if (shifts.containsKey(id)) {
             throw new IllegalArgumentException("Turno duplicado: " + id);
         }
+        if (shifts.size() >= 1000) {
+            throw new IllegalStateException("Limite de 1000 turnos atingido");
+        }
         Shift shift = new Shift(id, description(action), capacity);
         shifts.put(id, shift);
         return shift.snapshot();

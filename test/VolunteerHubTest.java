@@ -271,6 +271,8 @@ public final class VolunteerHubTest {
         VolunteerHub hub = new VolunteerHub();
         fails(IllegalArgumentException.class, () -> hub.addShift("turno", "Acao\nFalsa", 1));
         fails(IllegalArgumentException.class, () -> hub.addShift("turno", "Acao\u001b[31m", 1));
+        fails(IllegalArgumentException.class, () -> hub.addShift("turno", "Acao\u202Eteste", 1));
+        fails(IllegalArgumentException.class, () -> hub.addShift("turno", "Acao\u2066teste", 1));
         check(hub.listShifts().isEmpty(), "Descricoes invalidas nao podem criar turnos");
         check(hub.addShift("turno", "  Ação social  ", 1).action().equals("Ação social"),
             "Descricao com acentos e espaços deve ser normalizada");

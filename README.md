@@ -1,5 +1,7 @@
 # Voluntariado Hub
 
+**Navegação** · [Entrega](#entrega) · [Como executar](#como-executar) · [Alocacao automatica por prioridade](#alocacao-automatica-por-prioridade) · [Código e estudo](docs/ENGENHARIA_REVERSA.md)
+
 Primeiro MVP **Java 17** de cadastro de turnos e inscrições de voluntários fictícios, com controle de capacidade. Nenhum dado pessoal real é necessário.
 
 ## Entrega
@@ -75,3 +77,9 @@ Por enquanto é uma aplicação em memória e terminal, **não** um sistema púb
 Confira o [roteiro de validação e próximos incrementos](docs/GUIA_DE_VALIDACAO.md) para revisar a implementação e os critérios de qualidade antes de mudanças futuras.
 
 Nomes de ações rejeitam caracteres de controle (incluindo quebras de linha e escapes ANSI), sem impedir acentos em português. O catálogo em memória aceita no máximo 1.000 turnos; ao atingir o limite, um novo cadastro falha sem modificar os turnos existentes.
+
+## Código e roteiro de estudo
+
+Como testaria o limite quando a última vaga recebe pedidos quase simultâneos? O [guia de engenharia reversa](docs/ENGENHARIA_REVERSA.md) reúne o mapa dos módulos e uma pergunta técnica baseada no projeto.
+
+Mantido por [João Junior](https://github.com/juniordev830).
